@@ -1,65 +1,87 @@
-//REURSIVE SHAPES
+const internalScale = 10;
+const frameSize = 800;
 
-function setup()
-{
+const clrs = new Map([
+  ['accent', [255, 0, 100, 255]],
+]);
 
-  createCanvas(400,400);
-  background(0);
+const directions = new Map([
+  [
+    'up',
+    (pos, dist) => assign(copy(pos), {y: pos.y + dist})
+  ],
+  [
+    'down',
+    (pos, dist) => assign(copy(pos), {y: pos.y - dist})
+  ],
+  [
+    'right',
+    (pos, dist) => assign(copy(pos), {x: pos.x + dist})
+  ],
+  [
+    'left',
+    (pos, dist) => assign(copy(pos), {x: pos.x - dist})
+  ],
+  [
+    'zero',
+    (pos, dist) => pos
+  ]
+]);
 
-}
+let scaleFactor;
+let change = 0;
+let step = .01;
+let range;
 
-function draw()
-{
-
-  /*
-  Translating to center of canvas.
-  */
-  translate(width/2,height/2);
-  fractal(0,0,80);
-
-}
-
-function fractal(x,y,s)
-{
-
-  //HERE WE CREATE A RECURSIVE SHAPE
-  /*
-  First we start off with a simple,
-  defintion of the original shape.
-  We use parameters since we can manipulate
-  the whole shape later on.
-  */
-  noFill();
-  stroke(255,0,100);
-  ellipse(x,y,s,s);
-
-  /*
-  Here we call the shape within itself
-  at different places
-  */
-  if(s > 10)
-  {
-
-    //LEFT AND RIGHT
-    fractal(x + s/2,y,s/2);
-    fractal(x - s/2,y,s/2);
-
-    //TOP AND DOWN
-    fractal(x,y + s/2,s/2);
-    fractal(x,y - s/2,s/2);
-
-    //DIAGONALLY
-    fractal(x + s,y + s,s/4);
-    fractal(x - s,y - s,s/4);
-    fractal(x - s,y + s,s/4);
-    fractal(x + s,y - s,s/4);
-
-    //IN BETWEEN
-    fractal(x + s,y + s,s/2);
-    fractal(x - s,y + s,s/2);
-    fractal(x + s,y - s,s/2);
-    fractal(x - s,y - s,s/2);
-
+function setup() {
+  range = inRange(0, 1.5); // get range fn
+  for (key of clrs.keys()) {
+    clrs.set(key, toColour(clrs.get(key)));
   }
 
+  scaleFactor = frameSize / internalScale;
+  createCanvas(frameSize, frameSize);
+
+  strokeWeight(internalScale * .001);
+  stroke(clrs.get('accent'));
+  noFill();
 }
+
+function draw() {
+  clear(); // maintain transparent canvas
+
+  // center origin
+  scale(scaleFactor, scaleFactor);
+  translate(internalScale / 2, internalScale / 2);
+
+  // render
+  fractal({x: 0, y: 0}, internalScale / 8, 4);
+
+  if (!range(change)) {
+    step *= -1; // invert
+  }
+  change += step;
+}
+
+function fractal(pos, s, n) {
+  if (n <= 0) {
+    return;
+  }
+  n-=1;
+  const {x, y} = pos; // destrucuring
+  // expansion directions
+  for (direction of directions.values()) {
+    let calcPos = direction(pos, 2);
+    drawShape(calcPos, s);
+    fractal(calcPos, s - change, n);
+  }
+}
+
+// draw
+const drawShape = (pos, s) => ellipse(pos.x, pos.y, s * .5, s * .5);
+
+// process
+const inRange = (min, max) => (n) => ((min <= n) && (n <= max));
+const toColour = (arr) => color(...arr);
+const assign = Object.assign; // lazy
+const copy = (obj) => assign({}, obj);
